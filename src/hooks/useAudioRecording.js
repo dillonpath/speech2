@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import audioService from "../services/audioService";
 import geminiService from "../services/geminiService";
 import feedbackService from "../services/feedbackService";
-// optionally later: import elevenLabsService from "../services/elevenLabsService";
+import elevenLabsService from "../services/elevenLabsService";
 
 const useAudioRecording = (onSegmentProcessed) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -58,7 +58,7 @@ const useAudioRecording = (onSegmentProcessed) => {
           const feedback = feedbackService.evaluateRealTimeFeedback(metrics);
           if (feedback) {
             console.log("💬 FEEDBACK:", feedback.message);
-            // await elevenLabsService.playWhisper(feedback.message);
+            await elevenLabsService.playWhisper(feedback.message);
           }
 
           // ---- update UI
