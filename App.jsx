@@ -1,160 +1,59 @@
-import React, { useState, useRef, useEffect } from 'react';
-import useAudioRecording from './src/hooks/useAudioRecording';
-import apiService from './src/services/apiService';
-import authService from './src/services/authService';
-import AuthForm from './src/components/AuthForm';
-import './src/App.css';
+import React, { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import LoginPage from "./src/pages/LoginPage.jsx";
+import SignupPage from "./src/pages/SignupPage.jsx";
+import HomePage from "./src/pages/HomePage.jsx";
+import authService from "./src/services/authService";
 
-const App = () => {
-  const [segments, setSegments] = useState([]);
-  const [debugInfo, setDebugInfo] = useState('Waiting to start...');
-  const [conversationId, setConversationId] = useState(null);
+export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const conversationRef = useRef(null);
+  const [loading, setLoading] = useState(true);
 
-  // Check auth state on mount
   useEffect(() => {
-    const user = authService.getCurrentUser();
-    setIsAuthenticated(!!user);
+    const checkUser = setInterval(() => {
+      if (authService.isInitialized) {
+        setIsAuthenticated(!!authService.getCurrentUser());
+        setLoading(false);
+        clearInterval(checkUser);
+      }
+    }, 200);
+    return () => clearInterval(checkUser);
   }, []);
 
-  const { isRecording, startRecording, stopRecording, audioLevel } = useAudioRecording(
-    async (segment) => {
-      console.log('Segment processed:', segment);
-      setDebugInfo(`Processed segment at ${new Date().toLocaleTimeString()}`);
-
-      // Add segment to the list
-      setSegments(prev => [...prev, {
-        ...segment,
-        id: Date.now()
-      }]);
-    },
-    () => conversationRef.current
-  );
-
-  const handleRecordToggle = async () => {
-    if (isRecording) {
-      setDebugInfo('Processing final chunk (up to 7s)...');
-
-      // Save the conversation ID before stopping
-      const conversationToEnd = conversationRef.current;
-
-      // Stop recording immediately to halt the interval
-      await stopRecording();
-
-      // Wait up to 20 seconds for any in-flight Gemini processing to complete
-      // (Gemini can take 10-15 seconds for audio analysis)
-      setDebugInfo('Waiting for final segment processing...');
-      await new Promise(resolve => setTimeout(resolve, 20000));
-      setDebugInfo('Generating summary...');
-
-      // End conversation and generate summary
-      if (conversationToEnd) {
-        try {
-          await apiService.endConversation(conversationToEnd);
-          const summary = await apiService.generateSummary(conversationToEnd);
-          console.log('Conversation summary:', summary);
-          setDebugInfo(`Grade: ${summary.grade} (${summary.gradeScore.toFixed(1)}%)`);
-        } catch (error) {
-          console.error('Failed to end conversation:', error);
-          setDebugInfo('Stopped - Error generating summary');
-        }
-        // Don't clear conversationRef here - let late segments still save
-        // It will be cleared when starting a new recording
-      }
-    } else {
-      // Clear previous conversation when starting new recording
-      conversationRef.current = null;
-      setConversationId(null);
-      setSegments([]); // Clear previous segments when starting new recording
-      setDebugInfo('Starting recording...');
-
-      // Start new conversation
-      try {
-        const conversation = await apiService.startConversation(`Recording ${new Date().toLocaleString()}`);
-        conversationRef.current = conversation.id;
-        setConversationId(conversation.id);
-        console.log('Started conversation:', conversation.id);
-      } catch (error) {
-        console.error('Failed to start conversation:', error);
-      }
-
-      await startRecording();
-      setDebugInfo('Recording started - waiting for chunks...');
-    }
-  };
-
-  // Show auth form if not authenticated
-  if (!isAuthenticated) {
+  if (loading) {
     return (
-      <div className="container">
-        <div className="content">
-          <h1 className="title">Social X-Ray</h1>
-          <p className="subtitle">Real-time conversation coaching</p>
-          <AuthForm onAuthSuccess={() => setIsAuthenticated(true)} />
-        </div>
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          color: "white",
+          background: "#0f2027",
+          fontFamily: "Poppins, sans-serif",
+        }}
+      >
+        <h2>Loading...</h2>
       </div>
     );
   }
 
   return (
-    <div className="container">
-      <div className="content">
-        <h1 className="title">Social X-Ray</h1>
-        <p className="subtitle">Real-time conversation coaching</p>
-
-        <button
-          className="logout-button"
-          onClick={async () => {
-            await authService.logout();
-            setIsAuthenticated(false);
-          }}
-        >
-          Logout
-        </button>
-
-        <button
-          className={`button ${isRecording ? 'recording-button' : 'record-button'}`}
-          onClick={handleRecordToggle}
-        >
-          {isRecording ? 'Stop Recording' : 'Start Recording'}
-        </button>
-
-        <div className="debug-container">
-          <p className="debug-text">Status: {debugInfo}</p>
-        </div>
-
-        {isRecording && (
-          <div className="audio-level-container">
-            <p className="audio-level-text">
-              Audio Level: {Math.round(audioLevel * 100)}% {audioLevel > 0 ? '🎤' : '🔇'}
-            </p>
-            <div className="audio-level-bar">
-              <div className="audio-level-fill" style={{ width: `${Math.max(audioLevel * 100, 2)}%` }} />
-            </div>
-            <p className="debug-text">Raw level: {audioLevel.toFixed(4)}</p>
-          </div>
+    <Router>
+      <Routes>
+        {!isAuthenticated ? (
+          <>
+            <Route path="/login" element={<LoginPage onAuth={() => setIsAuthenticated(true)} />} />
+            <Route path="/signup" element={<SignupPage onAuth={() => setIsAuthenticated(true)} />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </>
+        ) : (
+          <>
+            <Route path="/" element={<HomePage onLogout={() => setIsAuthenticated(false)} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>
         )}
-
-        <div className="segments-container">
-          {segments.map((segment) => (
-            <div key={segment.id} className="segment-card">
-              <p className="segment-text">{segment.text || 'Processing...'}</p>
-              {segment.sentiment && (
-                <div className="segment-meta">
-                  <span className="meta-text">Speaker: {segment.speaker}</span>
-                  <span className="meta-text">Sentiment: {segment.sentiment}</span>
-                  <span className="meta-text">
-                    {new Date(segment.timestamp).toLocaleTimeString()}
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+      </Routes>
+    </Router>
   );
-};
-
-export default App;
+}

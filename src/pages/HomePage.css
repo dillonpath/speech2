@@ -1,0 +1,212 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+.home-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #050505, #0f1b2a, #1e2b3a);
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  overflow-x: hidden;
+}
+
+/* NAVBAR */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 1.2rem 2rem;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logo {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fff;
+  transition: 0.3s;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* HERO SECTION */
+.hero {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+.hero h1 {
+  font-size: 2.3rem;
+  background: linear-gradient(90deg, #00d4ff, #7cf7ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero p {
+  color: #bbb;
+  font-size: 1.1rem;
+  margin-top: 0.5rem;
+}
+
+/* RECORD BUTTON */
+.record-wrapper {
+  position: relative;
+  text-align: center;
+  margin-top: 3rem;
+}
+
+.record-btn {
+  position: relative;
+  background: linear-gradient(135deg, #00d4ff, #00b8e0);
+  border: none;
+  padding: 1.3rem 2.5rem;
+  font-size: 1.2rem;
+  border-radius: 50px;
+  cursor: pointer;
+  color: #000;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.record-btn.stop {
+  background: #ff5252;
+  color: white;
+}
+
+.record-btn:hover {
+  transform: translateY(-2px);
+}
+
+.mic-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 212, 255, 0.2), transparent 60%);
+  transform: translate(-50%, -50%);
+  transition: all 0.4s ease;
+  opacity: 0;
+  z-index: 1;
+}
+
+.mic-glow.active {
+  opacity: 1;
+  animation: pulseGlow 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.9;
+  }
+}
+
+/* STATUS SECTION */
+.status-section {
+  max-width: 400px;
+  margin: 3rem auto 1rem auto;
+  padding: 1.2rem;
+  text-align: center;
+}
+
+.status-title {
+  font-weight: 600;
+  color: #00d4ff;
+}
+
+.status-text {
+  font-size: 0.95rem;
+  color: #ddd;
+  margin-top: 0.5rem;
+}
+
+.audio-visualizer {
+  background: rgba(255, 255, 255, 0.1);
+  height: 10px;
+  border-radius: 5px;
+  margin-top: 0.8rem;
+  overflow: hidden;
+}
+
+.audio-bar {
+  height: 100%;
+  background: #00d4ff;
+  transition: width 0.2s ease;
+}
+
+/* SEGMENTS */
+.segments-section {
+  text-align: center;
+  padding: 2rem;
+}
+
+.segments-section h2 {
+  color: #00d4ff;
+  margin-bottom: 1.2rem;
+}
+
+.segments-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.segment-card {
+  text-align: left;
+  padding: 1rem 1.2rem;
+  border-radius: 12px;
+}
+
+.segment-card small {
+  display: block;
+  margin-top: 0.4rem;
+  color: #aaa;
+  font-size: 0.85rem;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.placeholder {
+  color: #aaa;
+  font-style: italic;
+  margin-top: 1rem;
+}
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  .hero h1 {
+    font-size: 1.8rem;
+  }
+
+  .record-btn {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+  }
+
+  .segments-grid {
+    padding: 0 1rem;
+  }
+}
