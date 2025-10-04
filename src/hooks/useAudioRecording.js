@@ -1,102 +1,95 @@
-import { useState, useRef, useEffect } from 'react';
-import audioService from '../services/audioService';
-import geminiService from '../services/geminiService';
+import { useState, useRef } from "react";
+import audioService from "../services/audioService";
+import geminiService from "../services/geminiService";
+import feedbackService from "../services/feedbackService";
+// optionally later: import elevenLabsService from "../services/elevenLabsService";
 
 const useAudioRecording = (onSegmentProcessed) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const processingInterval = useRef(null);
   const audioLevelInterval = useRef(null);
+  const conversationStart = useRef(null);
 
   const startRecording = async () => {
     try {
       await audioService.startRecording();
       setIsRecording(true);
+      conversationStart.current = Date.now();
+      feedbackService.startConversation();
 
-      // Update audio level every 100ms
+      // --- monitor volume
       audioLevelInterval.current = setInterval(() => {
-        const level = audioService.getAudioLevel();
-        setAudioLevel(level);
+        setAudioLevel(audioService.getAudioLevel());
       }, 100);
 
-      // Start processing audio chunks every 10 seconds
+      // --- process every 10 s
       let isProcessing = false;
       processingInterval.current = setInterval(async () => {
-        if (isProcessing) {
-          console.log('⏭️ Skipping - previous Gemini call still processing');
+        if (isProcessing) return;
+        isProcessing = true;
+
+        const audioChunk = await audioService.getCurrentChunk();
+        if (!audioChunk) {
+          console.warn("⚠️ No chunk this cycle");
+          isProcessing = false;
           return;
         }
 
-        console.log('🔄 Processing audio chunk...');
-        const audioChunk = await audioService.getCurrentChunk();
+        try {
+          const result = await geminiService.analyzeSpeech(audioChunk);
+          const duration = 10000;
+          const timestamp = Date.now();
+          const conversationDuration = timestamp - conversationStart.current;
 
-        if (audioChunk) {
-          console.log('📦 Got audio chunk, sending to Gemini...', audioChunk.size, 'bytes');
+          // ---- feedback logic
+          const metrics = {
+            wordsPerMinute:
+              result.analysis.speakingRate?.wordsPerMinute || 0,
+            interrupted:
+              result.analysis.interruptions?.detected || false,
+            questionCount:
+              result.transcription?.match(/\?/g)?.length || 0,
+            conversationDuration,
+            currentSpeakingDuration: duration,
+            speakingPercent: 50, // placeholder until full dual-speaker tracking
+          };
 
-          try {
-            isProcessing = true;
-
-            // Process with Gemini API
-            const result = await geminiService.analyzeSpeech(audioChunk);
-
-            console.log('=== GEMINI RESPONSE ===');
-            console.log('Transcription:', result.transcription);
-            console.log('Analysis:', result.analysis);
-            console.log('=====================');
-
-            if (result && result.transcription) {
-              // Call callback with processed segment
-              onSegmentProcessed({
-                speaker: result.speaker,
-                text: result.transcription,
-                duration: 10000,
-                timestamp: Date.now(),
-                sentiment: result.analysis?.sentiment || 'neutral',
-                analysis: result.analysis,
-              });
-            }
-          } catch (error) {
-            console.error('❌ Error processing with Gemini:', error);
-          } finally {
-            isProcessing = false;
+          const feedback = feedbackService.evaluateRealTimeFeedback(metrics);
+          if (feedback) {
+            console.log("💬 FEEDBACK:", feedback.message);
+            // await elevenLabsService.playWhisper(feedback.message);
           }
-        } else {
-          console.log('⚠️ No audio chunk available');
+
+          // ---- update UI
+          onSegmentProcessed({
+            ...result,
+            duration,
+            timestamp,
+            sentiment: result.analysis?.sentiment || "neutral",
+          });
+        } catch (e) {
+          console.error("❌ Gemini error:", e);
+        } finally {
+          isProcessing = false;
         }
       }, 10000);
-
-    } catch (error) {
-      console.error('Failed to start recording:', error);
+    } catch (err) {
+      console.error("Start recording failed:", err);
       setIsRecording(false);
     }
   };
 
   const stopRecording = async () => {
-    try {
-      if (processingInterval.current) {
-        clearInterval(processingInterval.current);
-        processingInterval.current = null;
-      }
-
-      if (audioLevelInterval.current) {
-        clearInterval(audioLevelInterval.current);
-        audioLevelInterval.current = null;
-      }
-
-      await audioService.stopRecording();
-      setIsRecording(false);
-      setAudioLevel(0);
-    } catch (error) {
-      console.error('Failed to stop recording:', error);
-    }
+    clearInterval(processingInterval.current);
+    clearInterval(audioLevelInterval.current);
+    await audioService.stopRecording();
+    setIsRecording(false);
+    setAudioLevel(0);
+    feedbackService.reset();
   };
 
-  return {
-    isRecording,
-    audioLevel,
-    startRecording,
-    stopRecording,
-  };
+  return { isRecording, audioLevel, startRecording, stopRecording };
 };
 
 export default useAudioRecording;
