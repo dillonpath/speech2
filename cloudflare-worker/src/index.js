@@ -75,12 +75,20 @@ router.post('/api/segments', async (request, env) => {
   const auth = await authenticate(request, env);
   if (auth instanceof Response) return auth;
 
-  const segment = await request.json();
-  const result = await saveSegment(env.DB, auth.userId, segment);
+  try {
+    const segment = await request.json();
+    const result = await saveSegment(env.DB, auth.userId, segment);
 
-  return new Response(JSON.stringify(result), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Error saving segment:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 });
 
 // Generate summary for a conversation
@@ -88,12 +96,20 @@ router.post('/api/conversations/:id/summary', async (request, env) => {
   const auth = await authenticate(request, env);
   if (auth instanceof Response) return auth;
 
-  const { id } = request.params;
-  const result = await generateSummary(env.DB, id, auth.userId);
+  try {
+    const { id } = request.params;
+    const result = await generateSummary(env.DB, id, auth.userId);
 
-  return new Response(JSON.stringify(result), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Error generating summary:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 });
 
 // Get summary for a conversation

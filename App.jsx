@@ -33,7 +33,7 @@ const App = () => {
       try {
         await apiService.saveSegment({
           conversationId: conversationRef.current,
-          transcription: segment.text,
+          transcription: segment.transcription,
           speaker: segment.speaker,
           sentiment: segment.sentiment,
           timestamp: segment.timestamp,
