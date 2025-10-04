@@ -1,10 +1,10 @@
 // Gemini API integration for speech processing
-import fs from 'fs';
 
 class GeminiService {
   constructor() {
+    // Use process.env which works in both React Native (with babel-plugin) and Node.js
     this.apiKey = process.env.GEMINI_API_KEY || '';
-    this.apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
+    this.apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
   }
 
   async analyzeSpeech(audioData, transcription = null) {
@@ -17,12 +17,38 @@ class GeminiService {
       let audioBase64 = null;
       let mimeType = null;
 
-      // Handle audio data input (can be file path, base64, or Buffer)
+      // Handle audio data input (can be file path, base64, Buffer, or Blob)
       if (audioData) {
-        if (typeof audioData === 'string' && audioData.startsWith('/')) {
-          // File path - read and encode
-          const buffer = fs.readFileSync(audioData);
-          audioBase64 = buffer.toString('base64');
+        console.log('Audio data type:', typeof audioData, audioData.constructor.name);
+
+        if (audioData instanceof Blob) {
+          // Blob object (from MediaRecorder)
+          console.log('Processing Blob. Size:', audioData.size, 'Type:', audioData.type);
+
+          if (audioData.size === 0) {
+            throw new Error('Audio blob is empty (0 bytes)');
+          }
+
+          audioBase64 = await this._blobToBase64(audioData);
+          mimeType = audioData.type || 'audio/webm';
+          console.log('✅ Converted blob to base64. Length:', audioBase64.length, 'characters');
+
+          if (!audioBase64 || audioBase64.length < 100) {
+            throw new Error('Base64 conversion failed or resulted in too little data');
+          }
+        } else if (typeof audioData === 'string' && audioData.startsWith('/')) {
+          // File path - only works in Node.js environment (not web/mobile)
+          if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+            // Node.js environment - use fs (dynamic import to avoid ESM issues)
+            const fs = await import('fs');
+            const buffer = fs.readFileSync(audioData);
+            audioBase64 = buffer.toString('base64');
+          } else {
+            // React Native/Web - fetch the file
+            const response = await fetch(audioData);
+            const blob = await response.blob();
+            audioBase64 = await this._blobToBase64(blob);
+          }
 
           // Detect mime type from file extension
           const ext = audioData.split('.').pop().toLowerCase();
@@ -39,21 +65,28 @@ class GeminiService {
           // Assume base64 string
           audioBase64 = audioData;
           mimeType = 'audio/mp3'; // Default
-        } else if (Buffer.isBuffer(audioData)) {
-          // Buffer
+        } else if (typeof Buffer !== 'undefined' && Buffer.isBuffer && Buffer.isBuffer(audioData)) {
+          // Buffer (Node.js only)
           audioBase64 = audioData.toString('base64');
           mimeType = 'audio/mp3'; // Default
         }
       }
 
-      const prompt = `Analyze this speech audio for communication patterns. Provide a detailed analysis in JSON format.
+      const prompt = `Analyze this speech audio for communication patterns. Listen carefully to the ENTIRE audio clip and provide a detailed, accurate analysis in JSON format.
+
+IMPORTANT INSTRUCTIONS:
+- Transcribe ALL words spoken in the audio (do not abbreviate or summarize)
+- Count EVERY instance of stuttering, word repetition, and prolongation you hear
+- Calculate speaking rate by dividing total word count by audio duration in minutes
+- Detect ALL filler words (um, uh, like, you know, so, etc.)
+- Be thorough and precise with all metrics
 
 ${transcription ? `Transcription reference: "${transcription}"` : 'Listen to the audio and transcribe it first.'}
 
-Analyze and return JSON with these fields:
+Return ONLY valid JSON with these fields:
 {
-  "transcription": "full text transcription of the audio",
-  "stutters": [{"word": "example", "timestamp": 0, "type": "repetition|prolongation|block"}],
+  "transcription": "COMPLETE word-for-word transcription of everything said",
+  "stutters": [{"word": "word that was stuttered", "timestamp": 0, "type": "repetition|prolongation|block"}],
   "pauses": [{"duration": 2.5, "timestamp": 10, "type": "filler|silence"}],
   "tone": {"overall": "confident|nervous|uncertain|aggressive|calm", "score": 0-100},
   "fillerWords": [{"word": "um", "count": 3, "timestamps": [1, 5, 12]}],
@@ -62,18 +95,29 @@ Analyze and return JSON with these fields:
   "interruptions": {"detected": true/false, "count": 0, "timestamps": []},
   "sentiment": "positive|neutral|negative",
   "keyInsights": ["Frequent pauses before answering", "High use of filler words"]
-}`;
+}
+
+IMPORTANT: Analyze the COMPLETE audio. Do not provide partial analysis.`;
 
       // Build request parts
       parts.push({ text: prompt });
 
       if (audioBase64) {
+        console.log('📤 Adding audio to request. Mime type:', mimeType, 'Base64 length:', audioBase64.length);
+
+        // Fix mime type - Gemini may not like audio/webm with chunks
+        // Use generic audio/webm without codecs
+        const cleanMimeType = mimeType.split(';')[0]; // Remove ;codecs=opus
+        console.log('Using clean mime type:', cleanMimeType);
+
         parts.push({
           inline_data: {
-            mime_type: mimeType,
+            mime_type: cleanMimeType,
             data: audioBase64
           }
         });
+      } else {
+        console.warn('⚠️ No audio data to send - will only send text prompt');
       }
 
       const response = await fetch(`${this.apiUrl}?key=${this.apiKey}`, {
@@ -97,6 +141,12 @@ Analyze and return JSON with these fields:
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ Gemini API Error Details:');
+        console.error('Status:', response.status, response.statusText);
+        console.error('Response:', errorText);
+        console.error('Request had audio?', !!audioBase64);
+        console.error('Audio size:', audioBase64 ? audioBase64.length : 0);
+        console.error('Mime type:', mimeType);
         throw new Error(`Gemini API error: ${response.statusText} - ${errorText}`);
       }
 
@@ -261,6 +311,18 @@ Return JSON: {"interrupted": true/false, "confidence": 0-100, "reason": "explana
       const text = s.transcription || '';
       return count + (text.match(/\?/g) || []).length;
     }, 0);
+  }
+
+  _blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   }
 }
 
