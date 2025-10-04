@@ -13,12 +13,6 @@ speechapp/
 │   │   ├── VoiceWaveform.js
 │   │   └── ReportCard.js
 │   │
-│   ├── screens/            # App screens
-│   │   ├── HomeScreen.js
-│   │   ├── ConversationScreen.js
-│   │   ├── DashboardScreen.js
-│   │   └── HistoryScreen.js
-│   │
 │   ├── services/           # Core services
 │   │   ├── audioService.js
 │   │   ├── geminiService.js

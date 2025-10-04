@@ -1,8 +1,11 @@
-import { nanoid } from 'nanoid';
+// Simple ID generator for Cloudflare Workers
+function generateId() {
+  return crypto.randomUUID();
+}
 
 // Start a new conversation
 export async function startConversation(db, userId, title = null) {
-  const id = nanoid();
+  const id = generateId();
   const now = Date.now();
 
   await db.prepare(`
@@ -49,7 +52,7 @@ export async function endConversation(db, conversationId, userId) {
 
 // Save a speech segment with Gemini analysis
 export async function saveSegment(db, userId, segment) {
-  const id = nanoid();
+  const id = generateId();
   const now = Date.now();
 
   const {

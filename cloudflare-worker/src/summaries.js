@@ -1,4 +1,7 @@
-import { nanoid } from 'nanoid';
+// Simple ID generator for Cloudflare Workers
+function generateId() {
+  return crypto.randomUUID();
+}
 
 // Generate summary and grade for a conversation
 export async function generateSummary(db, conversationId, userId) {
@@ -22,7 +25,7 @@ export async function generateSummary(db, conversationId, userId) {
   // Generate insights
   const { strengths, areasForImprovement, keyPatterns } = generateInsights(metrics, segments.results);
 
-  const id = nanoid();
+  const id = generateId();
   const now = Date.now();
 
   // Insert or update summary

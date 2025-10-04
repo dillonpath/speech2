@@ -1,12 +1,13 @@
 name = "social-xray-api"
-main = "src/index.js"
+main = "src/index-fixed.js"
 compatibility_date = "2024-01-01"
+workers_dev = true
 
 # D1 Database binding
 [[d1_databases]]
 binding = "DB"
 database_name = "social-xray-db"
-database_id = "YOUR_DATABASE_ID" # Will be filled when you create the D1 database
+database_id = "504def2c-25a0-43f8-9bcd-810f1a9540be"
 
 # Environment variables
 [vars]
