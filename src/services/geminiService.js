@@ -156,13 +156,42 @@ IMPORTANT: Analyze the COMPLETE audio. Do not provide partial analysis.`;
       console.log('API Response:', JSON.stringify(data, null, 2));
 
       const analysisText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+      console.log('Raw analysis text:', analysisText);
 
       // Extract JSON from markdown code blocks if present
-      const jsonMatch = analysisText.match(/```json\n([\s\S]*?)\n```/) ||
-                       analysisText.match(/```\n([\s\S]*?)\n```/) ||
-                       [null, analysisText];
+      let jsonText = analysisText;
 
-      const analysis = JSON.parse(jsonMatch[1] || analysisText);
+      // Try to extract from code blocks with various formats
+      const jsonMatch = analysisText.match(/```json\s*\n([\s\S]*?)\n```/) ||
+                       analysisText.match(/```\s*\n([\s\S]*?)\n```/) ||
+                       analysisText.match(/`([\s\S]*?)`/);
+
+      if (jsonMatch && jsonMatch[1]) {
+        jsonText = jsonMatch[1].trim();
+      }
+
+      console.log('Extracted JSON text:', jsonText);
+
+      let analysis;
+      try {
+        analysis = JSON.parse(jsonText);
+      } catch (parseError) {
+        console.error('Failed to parse JSON:', parseError);
+        console.error('Attempted to parse:', jsonText);
+        // Return a default structure if parsing fails
+        analysis = {
+          transcription: '',
+          stutters: [],
+          pauses: [],
+          tone: { overall: 'neutral', score: 50 },
+          fillerWords: [],
+          speakingRate: { wordsPerMinute: 0, variance: 'unknown' },
+          confidence: { score: 50, indicators: [] },
+          interruptions: { detected: false, count: 0, timestamps: [] },
+          sentiment: 'neutral',
+          keyInsights: ['Could not parse Gemini response']
+        };
+      }
 
       return {
         transcription: analysis.transcription || transcription || '',

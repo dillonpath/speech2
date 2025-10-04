@@ -19,7 +19,7 @@ const useAudioRecording = (onSegmentProcessed) => {
         setAudioLevel(level);
       }, 100);
 
-      // Start processing audio chunks every 12 seconds
+      // Start processing audio chunks every 10 seconds
       let isProcessing = false;
       processingInterval.current = setInterval(async () => {
         if (isProcessing) {
@@ -49,7 +49,7 @@ const useAudioRecording = (onSegmentProcessed) => {
               onSegmentProcessed({
                 speaker: result.speaker,
                 text: result.transcription,
-                duration: 12000,
+                duration: 10000,
                 timestamp: Date.now(),
                 sentiment: result.analysis?.sentiment || 'neutral',
                 analysis: result.analysis,
@@ -63,7 +63,7 @@ const useAudioRecording = (onSegmentProcessed) => {
         } else {
           console.log('⚠️ No audio chunk available');
         }
-      }, 12000);
+      }, 10000);
 
     } catch (error) {
       console.error('Failed to start recording:', error);
