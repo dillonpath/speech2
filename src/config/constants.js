@@ -8,19 +8,17 @@ export const AUDIO_CONFIG = {
 };
 
 export const THRESHOLDS = {
+  fastPaceWPM: 200,
+  slowPaceWPM: 100,
+  maxMonologueDuration: 30000, // 30 s
+  questionInterval: 60000,     // 1 min
   maxSpeakingPercent: 70,
   minSpeakingPercent: 30,
-  fastPaceWPM: 180,
-  slowPaceWPM: 120,
-  maxMonologueDuration: 120000, // 2 minutes
-  questionInterval: 300000, // 5 minutes
 };
 
 export const FEEDBACK_DELAYS = {
-  pace: 30000, // 30 seconds between pace warnings
-  interruption: 0, // Immediate
-  question: 300000, // 5 minutes
-  monologue: 120000, // 2 minutes
+  pace: 20000,      // 20 s cooldown
+  question: 60000,  // 1 min
 };
 
 export const API_ENDPOINTS = {
