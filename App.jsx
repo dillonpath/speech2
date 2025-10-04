@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import useAudioRecording from './src/hooks/useAudioRecording';
+import apiService from './src/services/apiService';
 import './src/App.css';
 
 const App = () => {
   const [segments, setSegments] = useState([]);
   const [debugInfo, setDebugInfo] = useState('Waiting to start...');
+  const [conversationId, setConversationId] = useState(null);
+  const conversationRef = useRef(null);
 
   const { isRecording, startRecording, stopRecording, audioLevel } = useAudioRecording(async (segment) => {
     console.log('Segment processed:', segment);
@@ -15,6 +18,24 @@ const App = () => {
       ...segment,
       id: Date.now()
     }]);
+
+    // Save to Cloudflare D1 (if authenticated)
+    if (conversationRef.current) {
+      try {
+        await apiService.saveSegment({
+          conversationId: conversationRef.current,
+          transcription: segment.text,
+          speaker: segment.speaker,
+          sentiment: segment.sentiment,
+          timestamp: segment.timestamp,
+          durationMs: segment.duration,
+          analysis: segment.analysis
+        });
+        console.log('Segment saved to D1');
+      } catch (error) {
+        console.error('Failed to save segment:', error);
+      }
+    }
   });
 
   const handleRecordToggle = async () => {
@@ -22,9 +43,34 @@ const App = () => {
       setDebugInfo('Stopping...');
       await stopRecording();
       setDebugInfo('Stopped');
+
+      // End conversation and generate summary
+      if (conversationRef.current) {
+        try {
+          await apiService.endConversation(conversationRef.current);
+          const summary = await apiService.generateSummary(conversationRef.current);
+          console.log('Conversation summary:', summary);
+          setDebugInfo(`Stopped - Grade: ${summary.grade} (${summary.gradeScore.toFixed(1)}%)`);
+        } catch (error) {
+          console.error('Failed to end conversation:', error);
+        }
+        conversationRef.current = null;
+        setConversationId(null);
+      }
     } else {
       setSegments([]); // Clear previous segments when starting new recording
       setDebugInfo('Starting recording...');
+
+      // Start new conversation
+      try {
+        const conversation = await apiService.startConversation(`Recording ${new Date().toLocaleString()}`);
+        conversationRef.current = conversation.id;
+        setConversationId(conversation.id);
+        console.log('Started conversation:', conversation.id);
+      } catch (error) {
+        console.error('Failed to start conversation:', error);
+      }
+
       await startRecording();
       setDebugInfo('Recording started - waiting for chunks...');
     }

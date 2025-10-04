@@ -1,0 +1,20 @@
+name = "social-xray-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "social-xray-db"
+database_id = "YOUR_DATABASE_ID" # Will be filled when you create the D1 database
+
+# Environment variables
+[vars]
+GEMINI_API_KEY = ""
+
+# CORS settings
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[env.development]
+vars = { ENVIRONMENT = "development" }

@@ -1,0 +1,20 @@
+{
+  "name": "social-xray-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create social-xray-db",
+    "db:init": "wrangler d1 execute social-xray-db --file=./schema.sql",
+    "db:migrate": "wrangler d1 migrations apply social-xray-db"
+  },
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  },
+  "dependencies": {
+    "itty-router": "^5.0.22",
+    "nanoid": "^5.1.6"
+  }
+}
