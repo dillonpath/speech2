@@ -1,0 +1,41 @@
+{
+  "feedback_messages": {
+    "pace_fast": {
+      "text": "Try slowing down your pace",
+      "audio_url": "assets/audio/cached-feedback/pace-fast.mp3",
+      "duration": 2.5
+    },
+    "pace_slow": {
+      "text": "You can speak a bit faster",
+      "audio_url": "assets/audio/cached-feedback/pace-slow.mp3",
+      "duration": 2.3
+    },
+    "interruption": {
+      "text": "Let them finish speaking",
+      "audio_url": "assets/audio/cached-feedback/interruption.mp3",
+      "duration": 2.1
+    },
+    "question": {
+      "text": "Ask them a question",
+      "audio_url": "assets/audio/cached-feedback/question.mp3",
+      "duration": 1.8
+    },
+    "monologue": {
+      "text": "You've been talking for a while, pause",
+      "audio_url": "assets/audio/cached-feedback/monologue.mp3",
+      "duration": 3.2
+    },
+    "balance_dominating": {
+      "text": "Try to listen more",
+      "audio_url": "assets/audio/cached-feedback/balance-dom.mp3",
+      "duration": 2.0
+    },
+    "balance_quiet": {
+      "text": "Contribute more to the conversation",
+      "audio_url": "assets/audio/cached-feedback/balance-quiet.mp3",
+      "duration": 2.7
+    }
+  },
+  "version": "1.0.0",
+  "generated_at": "2024-01-01T00:00:00Z"
+}
