@@ -1,13 +1,22 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import useAudioRecording from './src/hooks/useAudioRecording';
 import apiService from './src/services/apiService';
+import authService from './src/services/authService';
+import AuthForm from './src/components/AuthForm';
 import './src/App.css';
 
 const App = () => {
   const [segments, setSegments] = useState([]);
   const [debugInfo, setDebugInfo] = useState('Waiting to start...');
   const [conversationId, setConversationId] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const conversationRef = useRef(null);
+
+  // Check auth state on mount
+  useEffect(() => {
+    const user = authService.getCurrentUser();
+    setIsAuthenticated(!!user);
+  }, []);
 
   const { isRecording, startRecording, stopRecording, audioLevel } = useAudioRecording(async (segment) => {
     console.log('Segment processed:', segment);
@@ -76,11 +85,34 @@ const App = () => {
     }
   };
 
+  // Show auth form if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="container">
+        <div className="content">
+          <h1 className="title">Social X-Ray</h1>
+          <p className="subtitle">Real-time conversation coaching</p>
+          <AuthForm onAuthSuccess={() => setIsAuthenticated(true)} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container">
       <div className="content">
         <h1 className="title">Social X-Ray</h1>
         <p className="subtitle">Real-time conversation coaching</p>
+
+        <button
+          className="logout-button"
+          onClick={async () => {
+            await authService.logout();
+            setIsAuthenticated(false);
+          }}
+        >
+          Logout
+        </button>
 
         <button
           className={`button ${isRecording ? 'recording-button' : 'record-button'}`}
