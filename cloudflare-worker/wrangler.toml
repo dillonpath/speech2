@@ -11,7 +11,7 @@ database_id = "504def2c-25a0-43f8-9bcd-810f1a9540be"
 
 # Environment variables
 [vars]
-GEMINI_API_KEY = ""
+GEMINI_API_KEY = "AIzaSyC3zhA1pMXZMJno6tJwcGmUU7Ikybhkbfc"
 
 # CORS settings
 [env.production]

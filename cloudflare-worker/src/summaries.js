@@ -13,7 +13,33 @@ export async function generateSummary(db, conversationId, userId) {
   `).bind(conversationId, userId).all();
 
   if (!segments.results || segments.results.length === 0) {
-    throw new Error('No segments found for this conversation');
+    // Return a default summary for conversations with no segments
+    console.log('No segments found, returning default summary');
+    return {
+      id: crypto.randomUUID(),
+      conversationId,
+      grade: 'N/A',
+      gradeScore: 0,
+      metrics: {
+        totalSegments: 0,
+        totalWords: 0,
+        avgWordsPerMinute: 0,
+        totalFillerWords: 0,
+        fillerWordRate: 0,
+        totalStutters: 0,
+        stutterRate: 0,
+        totalPauses: 0,
+        avgPauseDuration: 0,
+        confidenceScore: 50,
+        overallTone: 'neutral',
+        overallSentiment: 'neutral',
+        fillerWordBreakdown: {},
+        toneBreakdown: {}
+      },
+      strengths: ['Recording was too short to analyze'],
+      areasForImprovement: ['Try recording for at least 7 seconds'],
+      keyPatterns: []
+    };
   }
 
   // Calculate aggregated metrics

@@ -18,55 +18,54 @@ const App = () => {
     setIsAuthenticated(!!user);
   }, []);
 
-  const { isRecording, startRecording, stopRecording, audioLevel } = useAudioRecording(async (segment) => {
-    console.log('Segment processed:', segment);
-    setDebugInfo(`Processed segment at ${new Date().toLocaleTimeString()}`);
+  const { isRecording, startRecording, stopRecording, audioLevel } = useAudioRecording(
+    async (segment) => {
+      console.log('Segment processed:', segment);
+      setDebugInfo(`Processed segment at ${new Date().toLocaleTimeString()}`);
 
-    // Add segment to the list
-    setSegments(prev => [...prev, {
-      ...segment,
-      id: Date.now()
-    }]);
-
-    // Save to Cloudflare D1 (if authenticated)
-    if (conversationRef.current) {
-      try {
-        await apiService.saveSegment({
-          conversationId: conversationRef.current,
-          transcription: segment.transcription,
-          speaker: segment.speaker,
-          sentiment: segment.sentiment,
-          timestamp: segment.timestamp,
-          durationMs: segment.duration,
-          analysis: segment.analysis
-        });
-        console.log('Segment saved to D1');
-      } catch (error) {
-        console.error('Failed to save segment:', error);
-      }
-    }
-  });
+      // Add segment to the list
+      setSegments(prev => [...prev, {
+        ...segment,
+        id: Date.now()
+      }]);
+    },
+    () => conversationRef.current
+  );
 
   const handleRecordToggle = async () => {
     if (isRecording) {
-      setDebugInfo('Stopping...');
+      setDebugInfo('Processing final chunk (up to 7s)...');
+
+      // Save the conversation ID before stopping
+      const conversationToEnd = conversationRef.current;
+
+      // Stop recording immediately to halt the interval
       await stopRecording();
-      setDebugInfo('Stopped');
+
+      // Wait up to 20 seconds for any in-flight Gemini processing to complete
+      // (Gemini can take 10-15 seconds for audio analysis)
+      setDebugInfo('Waiting for final segment processing...');
+      await new Promise(resolve => setTimeout(resolve, 20000));
+      setDebugInfo('Generating summary...');
 
       // End conversation and generate summary
-      if (conversationRef.current) {
+      if (conversationToEnd) {
         try {
-          await apiService.endConversation(conversationRef.current);
-          const summary = await apiService.generateSummary(conversationRef.current);
+          await apiService.endConversation(conversationToEnd);
+          const summary = await apiService.generateSummary(conversationToEnd);
           console.log('Conversation summary:', summary);
-          setDebugInfo(`Stopped - Grade: ${summary.grade} (${summary.gradeScore.toFixed(1)}%)`);
+          setDebugInfo(`Grade: ${summary.grade} (${summary.gradeScore.toFixed(1)}%)`);
         } catch (error) {
           console.error('Failed to end conversation:', error);
+          setDebugInfo('Stopped - Error generating summary');
         }
-        conversationRef.current = null;
-        setConversationId(null);
+        // Don't clear conversationRef here - let late segments still save
+        // It will be cleared when starting a new recording
       }
     } else {
+      // Clear previous conversation when starting new recording
+      conversationRef.current = null;
+      setConversationId(null);
       setSegments([]); // Clear previous segments when starting new recording
       setDebugInfo('Starting recording...');
 

@@ -54,6 +54,14 @@ class ApiService {
     });
   }
 
+  // Analyze audio with Gemini
+  async analyzeAudio(audioBase64, mimeType) {
+    return this.request('/api/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ audioBase64, mimeType })
+    });
+  }
+
   // Summaries
   async generateSummary(conversationId) {
     return this.request(`/api/conversations/${conversationId}/summary`, {

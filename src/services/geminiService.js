@@ -135,7 +135,8 @@ IMPORTANT: Analyze the COMPLETE audio. Do not provide partial analysis.`;
             topK: 40,
             topP: 0.95,
             maxOutputTokens: 8192,
-            responseModalities: ["TEXT"]
+            responseModalities: ["TEXT"],
+            responseMimeType: "application/json"
           }
         })
       });

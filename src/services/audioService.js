@@ -153,7 +153,20 @@ class AudioService {
     if (this.mediaRecorder && this.stream) {
       console.log("🔄 Restarting recorder...");
       this.audioChunks = [];
-      this.mediaRecorder.start(1000);
+
+      // Wait a bit for MediaRecorder to fully stop
+      setTimeout(() => {
+        if (this.mediaRecorder && this.mediaRecorder.state === 'inactive') {
+          try {
+            this.mediaRecorder.start(1000);
+            console.log("✅ Recorder restarted");
+          } catch (error) {
+            console.error("❌ Failed to restart recorder:", error);
+          }
+        } else {
+          console.warn('⚠️ MediaRecorder not in inactive state:', this.mediaRecorder?.state);
+        }
+      }, 100);
     }
   }
 }

@@ -1,7 +1,8 @@
 // Import dependencies
-// import { verifyFirebaseToken } from './auth'; // TODO: Enable after testing
+import { verifyFirebaseToken } from './auth.js';
 import { saveSegment, startConversation, endConversation } from './conversations.js';
 import { generateSummary, getSummary, getUserSummaries } from './summaries.js';
+import { analyzeSpeechAudio } from './gemini.js';
 
 // CORS headers
 const corsHeaders = {
@@ -10,22 +11,55 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-// Temporary auth middleware (will verify Firebase tokens later)
+// Decode JWT without verification (temporary - for development only)
+function parseJwt(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+}
+
+// Firebase auth middleware
 async function authenticate(request, env) {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
+    console.log('Missing auth header');
     return new Response(JSON.stringify({ error: 'Missing or invalid authorization header' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 
-  // TODO: Verify Firebase token
-  // const token = authHeader.substring(7);
-  // const decodedToken = await verifyFirebaseToken(token);
+  const token = authHeader.substring(7);
+  console.log('Token received, length:', token.length);
 
-  // Temporary: return mock user for testing
-  return { userId: 'test-user-123' };
+  // TEMPORARY: Just decode without full verification
+  // TODO: Re-enable full verification once working
+  try {
+    const decoded = parseJwt(token);
+    if (!decoded || !decoded.sub) {
+      throw new Error('Invalid token format');
+    }
+
+    // Check if token is expired
+    if (decoded.exp && decoded.exp < Date.now() / 1000) {
+      throw new Error('Token expired');
+    }
+
+    console.log('Token decoded for user:', decoded.sub);
+    return { userId: decoded.sub };
+  } catch (error) {
+    console.error('Auth error details:', error.message);
+    return new Response(JSON.stringify({ error: 'Invalid token: ' + error.message }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 }
 
 export default {
@@ -80,6 +114,35 @@ export default {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Analyze audio with Gemini
+    if (pathname === '/api/analyze' && method === 'POST') {
+      const auth = await authenticate(request, env);
+      if (auth instanceof Response) return auth;
+
+      try {
+        const { audioBase64, mimeType } = await request.json();
+
+        if (!audioBase64) {
+          return new Response(JSON.stringify({ error: 'Audio data required' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const result = await analyzeSpeechAudio(audioBase64, mimeType, env.GEMINI_API_KEY);
+
+        return new Response(JSON.stringify(result), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        console.error('Error analyzing audio:', error);
         return new Response(JSON.stringify({ error: error.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
