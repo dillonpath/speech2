@@ -231,6 +231,31 @@ export default {
       }
     }
 
+    // Get segments for a conversation
+    if (pathname.match(/^\/api\/conversations\/[^/]+\/segments$/) && method === 'GET') {
+      const auth = await authenticate(request, env);
+      if (auth instanceof Response) return auth;
+
+      const conversationId = pathname.split('/')[3];
+
+      try {
+        const segments = await env.DB.prepare(`
+          SELECT * FROM speech_segments
+          WHERE conversation_id = ? AND user_id = ?
+          ORDER BY timestamp ASC
+        `).bind(conversationId, auth.userId).all();
+
+        return new Response(JSON.stringify(segments.results || []), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // 404 - Not found
     return new Response(JSON.stringify({ error: 'Not found' }), {
       status: 404,
