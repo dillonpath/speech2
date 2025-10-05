@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'import.meta.env.VITE_CLOUDFLARE_WORKER_URL': JSON.stringify(env.CLOUDFLARE_WORKER_URL || 'http://localhost:8787'),
+      'import.meta.env.VITE_CLOUDFLARE_WORKER_URL': JSON.stringify(env.VITE_CLOUDFLARE_WORKER_URL || 'http://localhost:8787'),
     },
     server: {
       port: 3000
