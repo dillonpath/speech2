@@ -1,27 +1,28 @@
-// App configuration and constants
-
-export const AUDIO_CONFIG = {
-  sampleRate: 44100,
-  channels: 1,
-  bitsPerSample: 16,
-  chunkDuration: 5000, // 5 seconds
-};
-
+// Faster feedback thresholds
 export const THRESHOLDS = {
-  fastPaceWPM: 200,
-  slowPaceWPM: 100,
-  maxMonologueDuration: 30000, // 30 s
-  questionInterval: 60000,     // 1 min
-  maxSpeakingPercent: 70,
-  minSpeakingPercent: 30,
+  // Speaking pace (words per minute)
+  fastPaceWPM: 160,    // Lowered to catch more cases
+  slowPaceWPM: 100,    // Raised to catch slow speakers earlier
+  
+  // Monologue detection (in segments of 7 seconds each)
+  maxConsecutiveSegments: 2, // Reduced from 3 to 2 (~14 seconds)
+  
+  // Speaking balance (%)
+  maxSpeakingPercent: 65,    // Lowered to catch dominance earlier
+  minSpeakingPercent: 35,    // Raised to catch quietness earlier
+  
+  // Interruption thresholds
+  minInterruptionsForFeedback: 1, // Reduced from 2 to 1
+  
+  // Question timing (milliseconds)
+  questionPromptTime: 15000, // Reduced from 30000 to 15000
+  
+  // Filler word thresholds
+  minFillersForFeedback: 2, // Reduced from 3 to 2
 };
 
-export const FEEDBACK_DELAYS = {
-  pace: 20000,      // 20 s cooldown
-  question: 60000,  // 1 min
-};
-
-export const API_ENDPOINTS = {
-  gemini: 'https://generativelanguage.googleapis.com/v1beta',
-  cloudflareWorker: 'https://your-worker.workers.dev',
+export const FEEDBACK_CONFIG = {
+  cooldown: 5000, // 5 seconds between feedback
+  initialGracePeriod: 5000, // Reduced from 10000 to 5000
+  maxFeedbacksPerConversation: 8,
 };

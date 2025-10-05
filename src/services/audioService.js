@@ -1,4 +1,4 @@
-// Audio recording and processing service — fixed version
+// Audio recording and processing service — FIXED version
 class AudioService {
   constructor() {
     this.isRecording = false;
@@ -9,6 +9,7 @@ class AudioService {
     this.analyser = null;
     this.audioLevel = 0;
     this.recordingMimeType = "audio/webm";
+    this.isProcessingChunk = false;
   }
 
   async startRecording() {
@@ -17,13 +18,21 @@ class AudioService {
       console.log("Requesting microphone access...");
 
       // Request mic permission
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 16000
+        } 
+      });
       console.log("✅ Microphone access granted");
 
       // Create AudioContext
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 16000
+      });
 
-      // ⚙️ Resume AudioContext (needed for Chrome/Safari desktop)
+      // Resume AudioContext if needed
       if (this.audioContext.state === "suspended") {
         await this.audioContext.resume();
         console.log("🎧 AudioContext resumed after user gesture");
@@ -35,39 +44,47 @@ class AudioService {
       source.connect(this.analyser);
       this.analyser.fftSize = 256;
 
-      // ✅ Start monitoring *after* marking recording as active
-      this.isRecording = true;
-      this.monitorAudioLevel();
-
       // Pick best-supported mime type
       const supportedTypes = [
         "audio/webm;codecs=opus",
-        "audio/ogg;codecs=opus",
+        "audio/ogg;codecs=opus", 
         "audio/mp4",
-        "audio/mpeg",
         "audio/webm"
       ];
+      
       let options = {};
       for (const type of supportedTypes) {
         if (MediaRecorder.isTypeSupported(type)) {
           options.mimeType = type;
           this.recordingMimeType = type;
+          console.log("🎙️ Using codec:", type);
           break;
         }
       }
 
-      // Create MediaRecorder
+      // Create MediaRecorder with longer timeslice for more stable chunks
       this.mediaRecorder = new MediaRecorder(this.stream, options);
       this.audioChunks = [];
 
       this.mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) this.audioChunks.push(e.data);
+        if (e.data.size > 0) {
+          this.audioChunks.push(e.data);
+        }
       };
-      this.mediaRecorder.onstop = () => console.log("🛑 MediaRecorder stopped");
 
-      // Start recording with 1s slices
-      this.mediaRecorder.start(1000);
-      console.log("🎙️ Recording started using:", this.recordingMimeType);
+      this.mediaRecorder.onstop = () => {
+        console.log("🛑 MediaRecorder stopped");
+      };
+
+      // Start recording with 2s slices for more stable audio
+      this.mediaRecorder.start(2000);
+      this.isRecording = true;
+      
+      // Start audio level monitoring
+      this.monitorAudioLevel();
+      
+      console.log("🎙️ Recording started successfully");
+
     } catch (err) {
       console.error("❌ Failed to start recording:", err);
       this.isRecording = false;
@@ -75,7 +92,6 @@ class AudioService {
     }
   }
 
-  // 🔊 Continuously updates the audio level
   monitorAudioLevel() {
     if (!this.isRecording || !this.analyser) return;
 
@@ -84,9 +100,7 @@ class AudioService {
 
     // Compute normalized volume (0–1)
     const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length / 255;
-
-    // Smooth out animation
-    this.audioLevel = this.audioLevel * 0.8 + avg * 0.2;
+    this.audioLevel = this.audioLevel * 0.7 + avg * 0.3;
 
     requestAnimationFrame(() => this.monitorAudioLevel());
   }
@@ -97,6 +111,8 @@ class AudioService {
 
   async stopRecording() {
     try {
+      this.isRecording = false;
+      
       if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
         this.mediaRecorder.stop();
       }
@@ -107,7 +123,6 @@ class AudioService {
         await this.audioContext.close();
       }
 
-      this.isRecording = false;
       this.audioLevel = 0;
       console.log("✅ Recording stopped successfully");
     } catch (err) {
@@ -116,22 +131,44 @@ class AudioService {
   }
 
   async getCurrentChunk() {
-    if (!this.mediaRecorder || this.mediaRecorder.state !== "recording") {
+    if (!this.isRecording || !this.mediaRecorder || this.mediaRecorder.state !== "recording") {
       console.warn("⚠️ MediaRecorder not recording");
       return null;
     }
 
+    if (this.isProcessingChunk) {
+      console.warn("⚠️ Already processing chunk, skipping");
+      return null;
+    }
+
+    this.isProcessingChunk = true;
+
     return new Promise((resolve) => {
+      // Clone current chunks and clear
       const collected = [...this.audioChunks];
       this.audioChunks = [];
 
-      const onStop = () => {
-        this.mediaRecorder.removeEventListener("stop", onStop);
-
-        const size = collected.reduce((s, c) => s + c.size, 0);
-        if (size < 1000) {
-          console.warn("⚠️ Chunk too small, skipping");
-          this.restartRecording();
+      const checkChunkSize = () => {
+        const totalSize = collected.reduce((sum, chunk) => sum + chunk.size, 0);
+        
+        // Require minimum 3KB to avoid empty/silent chunks
+        if (totalSize < 3000) {
+          console.warn("⚠️ Chunk too small, skipping:", totalSize, "bytes");
+          this.isProcessingChunk = false;
+          
+          // Don't restart if we're not recording anymore
+          if (this.isRecording) {
+            setTimeout(() => {
+              if (this.mediaRecorder && this.mediaRecorder.state === 'inactive') {
+                try {
+                  this.mediaRecorder.start(2000);
+                } catch (e) {
+                  console.error("❌ Failed to restart after small chunk:", e);
+                }
+              }
+            }, 100);
+          }
+          
           resolve(null);
           return;
         }
@@ -140,34 +177,31 @@ class AudioService {
         const blob = new Blob(collected, { type: mime });
         console.log("✅ Audio chunk ready:", blob.size, "bytes");
 
-        this.restartRecording();
+        this.isProcessingChunk = false;
+        
+        // Restart recording for next chunk
+        if (this.isRecording) {
+          setTimeout(() => {
+            if (this.mediaRecorder && this.mediaRecorder.state === 'inactive') {
+              try {
+                this.mediaRecorder.start(2000);
+                console.log("🔄 Recorder restarted for next chunk");
+              } catch (error) {
+                console.error("❌ Failed to restart recorder:", error);
+              }
+            }
+          }, 50);
+        }
+
         resolve(blob);
       };
 
-      this.mediaRecorder.addEventListener("stop", onStop);
+      // Stop current recording to get the chunk
       this.mediaRecorder.stop();
+      
+      // Wait a bit for the stop to complete and data to be available
+      setTimeout(checkChunkSize, 100);
     });
-  }
-
-  restartRecording() {
-    if (this.mediaRecorder && this.stream) {
-      console.log("🔄 Restarting recorder...");
-      this.audioChunks = [];
-
-      // Wait a bit for MediaRecorder to fully stop
-      setTimeout(() => {
-        if (this.mediaRecorder && this.mediaRecorder.state === 'inactive') {
-          try {
-            this.mediaRecorder.start(1000);
-            console.log("✅ Recorder restarted");
-          } catch (error) {
-            console.error("❌ Failed to restart recorder:", error);
-          }
-        } else {
-          console.warn('⚠️ MediaRecorder not in inactive state:', this.mediaRecorder?.state);
-        }
-      }, 100);
-    }
   }
 }
 
