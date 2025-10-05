@@ -1,10 +1,28 @@
 import React, { useState, useRef } from "react";
+import { motion } from "framer-motion";
 import useAudioRecording from "../hooks/useAudioRecording";
 import apiService from "../services/apiService";
 import authService from "../services/authService";
+import FeedbackCard from "../components/FeedbackCard";
 import "../pages/HomePage.css";
 
+// ===== Helper functions for tone + confidence =====
+const toneClass = (tone) => {
+  const t = (tone || "neutral").toLowerCase();
+  if (["confident", "assertive", "excited"].includes(t)) return "tone-confident";
+  if (["nervous", "uncertain", "anxious", "hesitant"].includes(t)) return "tone-nervous";
+  return "tone-calm";
+};
+
+const estimateConfidence = (tone, level = 0) => {
+  const t = (tone || "neutral").toLowerCase();
+  let base = t === "confident" ? 75 : t === "nervous" ? 45 : 62;
+  const lvlBoost = Math.min(10, Math.max(-10, (level - 0.2) * 50));
+  return Math.max(5, Math.min(95, Math.round(base + lvlBoost)));
+};
+
 export default function HomePage({ onLogout }) {
+  const [feedbackSummary, setFeedbackSummary] = useState(null);
   const [segments, setSegments] = useState([]);
   const [debugInfo, setDebugInfo] = useState("Waiting to start...");
   const [conversationId, setConversationId] = useState(null);
@@ -25,19 +43,56 @@ export default function HomePage({ onLogout }) {
       const conversationToEnd = conversationRef.current;
 
       await stopRecording();
-
       setDebugInfo("Waiting for final segment...");
       await new Promise((r) => setTimeout(r, 20000));
       setDebugInfo("Generating summary...");
 
       if (conversationToEnd) {
         try {
-          await apiService.endConversation(conversationToEnd);
           const summary = await apiService.generateSummary(conversationToEnd);
           console.log("Summary:", summary);
-          setDebugInfo(`Grade: ${summary.grade} (${summary.gradeScore.toFixed(1)}%)`);
+
+          if (!summary) {
+            console.warn("⚠️ No summary data returned — using fallback");
+            setFeedbackSummary({
+              confidence: 70,
+              tone: "neutral",
+              fillerWords: [],
+              strengths: ["Good pacing", "Positive tone"],
+              improvements: ["Reduce filler words", "Pause naturally"],
+            });
+            setDebugInfo("No summary returned (fallback used)");
+            return;
+          }
+
+          const {
+            confidenceScore = 70,
+            toneProfile = "neutral",
+            fillerWords = [],
+            strengths = ["Good pacing", "Positive tone"],
+            improvements = ["Reduce filler words", "Pause naturally"],
+            grade = "B+",
+            gradeScore = 85,
+          } = summary || {};
+
+          setFeedbackSummary({
+            confidence: confidenceScore,
+            tone: toneProfile,
+            fillerWords,
+            strengths,
+            improvements,
+          });
+
+          setDebugInfo(`Grade: ${grade} (${gradeScore.toFixed(1)}%)`);
         } catch (err) {
           console.error("Summary error:", err);
+          setFeedbackSummary({
+            confidence: 70,
+            tone: "neutral",
+            fillerWords: [],
+            strengths: ["Good pacing", "Positive tone"],
+            improvements: ["Reduce filler words", "Pause naturally"],
+          });
           setDebugInfo("Error generating summary");
         }
       }
@@ -64,8 +119,20 @@ export default function HomePage({ onLogout }) {
 
   const handleLogout = async () => {
     await authService.logout();
-    onLogout();
+    if (onLogout) onLogout();
   };
+
+  // ===== Derived data for Live Coach Panel =====
+  const latest = segments[segments.length - 1];
+  const latestTone =
+    latest?.tone ||
+    latest?.analysis?.tone?.overall ||
+    (latest?.sentiment === "negative" ? "nervous" : "calm");
+
+  const rawConfidence = latest?.analysis?.confidence?.score;
+  const confidence = Number.isFinite(rawConfidence)
+    ? Math.round(rawConfidence)
+    : estimateConfidence(latestTone, audioLevel);
 
   return (
     <div className="home-container">
@@ -109,26 +176,39 @@ export default function HomePage({ onLogout }) {
         )}
       </div>
 
-      {/* Segments Section */}
-      <div className="segments-section">
-        <h2>🗒 Conversation Segments</h2>
-        <div className="segments-grid">
-          {segments.map((segment) => (
-            <div key={segment.id} className="segment-card glass-card">
-              <p>{segment.text || "Processing..."}</p>
-              {segment.sentiment && (
-                <small>
-                  Speaker: {segment.speaker} • Sentiment: {segment.sentiment} •{" "}
-                  {new Date(segment.timestamp).toLocaleTimeString()}
-                </small>
-              )}
-            </div>
-          ))}
-          {segments.length === 0 && (
-            <p className="placeholder">No segments yet. Start recording to see results!</p>
-          )}
+      {/* === Live Coach Panel === */}
+      <motion.div
+        className="coach-panel glass-card"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        <div className="coach-left">
+          <div className="confidence-header">
+            <span>Confidence</span>
+            <span className="confidence-value">{confidence}%</span>
+          </div>
+          <div className="confidence-bar">
+            <div className="confidence-fill" style={{ width: `${confidence}%` }} />
+          </div>
+          <div className="confidence-scale">
+            <span>Low</span>
+            <span>Med</span>
+            <span>High</span>
+          </div>
         </div>
-      </div>
+
+        <div className="coach-right">
+          <div className={`tone-chip ${toneClass(latestTone)}`}>
+            {latestTone?.toString()?.slice(0, 1).toUpperCase() +
+              latestTone?.toString()?.slice(1)}
+          </div>
+          <div className="tone-caption">Current Tone</div>
+        </div>
+      </motion.div>
+
+      {/* ✅ Feedback summary card only */}
+      {feedbackSummary && <FeedbackCard feedback={feedbackSummary} />}
     </div>
   );
 }

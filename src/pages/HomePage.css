@@ -1,104 +1,117 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+/* === GLOBAL LAYOUT === */
+body {
+  background: radial-gradient(circle at top left, #0b0f19, #111826 60%, #0b0f19);
+  font-family: "Inter", system-ui, sans-serif;
+  color: #e5e9f0;
+  margin: 0;
+  padding: 0;
+}
 
 .home-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #050505, #0f1b2a, #1e2b3a);
-  color: white;
-  font-family: 'Poppins', sans-serif;
-  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-bottom: 3rem;
 }
 
-/* NAVBAR */
+/* === NAVBAR === */
 .navbar {
+  width: 100%;
   display: flex;
   justify-content: space-between;
-  padding: 1.2rem 2rem;
   align-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1rem 2rem;
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
 .logo {
+  color: #00d4ff;
   font-size: 1.4rem;
-  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .logout-btn {
-  background: transparent;
-  border: 1px solid #fff;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
+  background: linear-gradient(90deg, #ff5252, #ff7b00);
+  border: none;
   color: #fff;
-  transition: 0.3s;
+  padding: 0.5rem 1.1rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.25s ease;
 }
 
 .logout-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(255, 82, 82, 0.4);
 }
 
-/* HERO SECTION */
+/* === HERO SECTION === */
 .hero {
-  text-align: center;
   margin-top: 3rem;
 }
 
 .hero h1 {
-  font-size: 2.3rem;
-  background: linear-gradient(90deg, #00d4ff, #7cf7ff);
+  font-size: 2.2rem;
+  color: #00d4ff;
+  background: linear-gradient(90deg, #00d4ff, #1db954);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .hero p {
-  color: #bbb;
-  font-size: 1.1rem;
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
+  color: #b0bac9;
+  font-size: 1rem;
 }
 
-/* RECORD BUTTON */
+/* === RECORD BUTTON === */
 .record-wrapper {
   position: relative;
-  text-align: center;
-  margin-top: 3rem;
+  margin-top: 2rem;
 }
 
 .record-btn {
-  position: relative;
-  background: linear-gradient(135deg, #00d4ff, #00b8e0);
+  background: linear-gradient(135deg, #1db954, #00d4ff);
   border: none;
-  padding: 1.3rem 2.5rem;
+  color: #fff;
+  padding: 1rem 2.4rem;
   font-size: 1.2rem;
-  border-radius: 50px;
+  border-radius: 999px;
   cursor: pointer;
-  color: #000;
-  font-weight: 600;
   transition: all 0.3s ease;
-  z-index: 2;
+  font-weight: 600;
+  box-shadow: 0 0 25px rgba(0, 212, 255, 0.4);
 }
 
 .record-btn.stop {
-  background: #ff5252;
-  color: white;
+  background: linear-gradient(135deg, #ff5252, #ff7b00);
+  box-shadow: 0 0 25px rgba(255, 82, 82, 0.5);
 }
 
 .record-btn:hover {
-  transform: translateY(-2px);
+  transform: scale(1.05);
 }
 
 .mic-glow {
   position: absolute;
-  top: 50%;
+  top: 0;
   left: 50%;
-  width: 160px;
-  height: 160px;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 150px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 212, 255, 0.2), transparent 60%);
-  transform: translate(-50%, -50%);
-  transition: all 0.4s ease;
+  background: radial-gradient(rgba(0, 212, 255, 0.2), transparent 70%);
   opacity: 0;
-  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
 }
 
 .mic-glow.active {
@@ -107,106 +120,200 @@
 }
 
 @keyframes pulseGlow {
-  0%, 100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.6;
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.2);
-    opacity: 0.9;
-  }
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.8; }
+  50% { transform: translateX(-50%) scale(1.2); opacity: 0.4; }
 }
 
-/* STATUS SECTION */
+/* === GLASS CARDS === */
+.glass-card {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.25);
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(0, 212, 255, 0.4);
+}
+
+/* === STATUS SECTION === */
 .status-section {
-  max-width: 400px;
-  margin: 3rem auto 1rem auto;
-  padding: 1.2rem;
-  text-align: center;
+  width: 90%;
+  max-width: 750px;
+  margin-top: 2rem;
+  padding: 1.2rem 1.5rem;
+  text-align: left;
 }
 
 .status-title {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1.1rem;
   color: #00d4ff;
+  margin-bottom: 0.3rem;
 }
 
 .status-text {
+  color: #bfc6d2;
   font-size: 0.95rem;
-  color: #ddd;
-  margin-top: 0.5rem;
+  margin-bottom: 0.8rem;
 }
 
+/* Audio visualizer bar */
 .audio-visualizer {
-  background: rgba(255, 255, 255, 0.1);
+  width: 100%;
   height: 10px;
-  border-radius: 5px;
-  margin-top: 0.8rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
   overflow: hidden;
 }
 
 .audio-bar {
   height: 100%;
-  background: #00d4ff;
+  background: linear-gradient(90deg, #1db954, #00d4ff);
   transition: width 0.2s ease;
 }
 
-/* SEGMENTS */
+/* === COACH PANEL (Confidence + Tone) === */
+.coach-panel {
+  width: 90%;
+  max-width: 750px;
+  margin-top: 1.5rem;
+  padding: 1.3rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left;
+  gap: 1.5rem;
+}
+
+.confidence-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: #cfd8e3;
+  font-size: 0.95rem;
+}
+
+.confidence-value {
+  color: #fff;
+  font-weight: 700;
+}
+
+.confidence-bar {
+  height: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.4rem;
+}
+
+.confidence-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+  background: linear-gradient(90deg, #ff5252, #ffb84d, #00d4ff, #1db954);
+}
+
+.confidence-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #aab1bb;
+  margin-top: 0.35rem;
+}
+
+.tone-chip {
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  text-transform: capitalize;
+  font-size: 0.95rem;
+}
+
+.tone-confident {
+  color: #1db954;
+  background: rgba(29, 185, 84, 0.15);
+  border-color: rgba(29, 185, 84, 0.45);
+}
+
+.tone-calm {
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.15);
+  border-color: rgba(0, 212, 255, 0.45);
+}
+
+.tone-nervous {
+  color: #ff5252;
+  background: rgba(255, 82, 82, 0.15);
+  border-color: rgba(255, 82, 82, 0.45);
+}
+
+.tone-caption {
+  font-size: 0.8rem;
+  color: #aab1bb;
+  margin-top: 0.25rem;
+}
+
+/* === SEGMENTS SECTION === */
 .segments-section {
-  text-align: center;
-  padding: 2rem;
+  width: 90%;
+  max-width: 800px;
+  margin-top: 2rem;
 }
 
 .segments-section h2 {
   color: #00d4ff;
-  margin-bottom: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.8rem;
 }
 
 .segments-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 1rem;
-  max-width: 700px;
-  margin: 0 auto;
 }
 
 .segment-card {
+  padding: 1rem;
   text-align: left;
-  padding: 1rem 1.2rem;
-  border-radius: 12px;
+  transition: transform 0.2s ease;
+}
+
+.segment-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(0, 212, 255, 0.3);
+}
+
+.segment-card p {
+  font-size: 0.95rem;
+  color: #e2e6ec;
 }
 
 .segment-card small {
   display: block;
-  margin-top: 0.4rem;
-  color: #aaa;
-  font-size: 0.85rem;
-}
-
-.glass-card {
-  background: rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  margin-top: 0.6rem;
+  color: #aab1bb;
+  font-size: 0.8rem;
 }
 
 .placeholder {
-  color: #aaa;
-  font-style: italic;
+  color: #aab1bb;
   margin-top: 1rem;
 }
 
-/* RESPONSIVE */
-@media (max-width: 600px) {
+@media (max-width: 640px) {
+  .navbar {
+    padding: 0.8rem 1.2rem;
+  }
   .hero h1 {
     font-size: 1.8rem;
   }
-
-  .record-btn {
-    padding: 1rem 2rem;
-    font-size: 1rem;
-  }
-
-  .segments-grid {
-    padding: 0 1rem;
+  .coach-panel {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
